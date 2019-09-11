@@ -1,0 +1,68 @@
+---
+title: "Productivity"
+author: "Andre Neveu"
+date: "9/9/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE, echo=TRUE}
+install.packages(c("readr","zoo","tidyverse","RCurl",
+                   "ineq","reshape2"), repos = "http://cran.us.r-project.org")
+```
+
+## Productivity Slowdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>. Here I have chosen to create an html document, but you can easily change the output to pdf in the ".Rmd" file's YAML which shows up at the top of the file when loaded into R. 
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. 
+
+What is great about these documents, is that you can both include R code in it, and when it is "knitted" the code runs and embeds things like output and plots right in the document. 
+
+You can embed an R code chunk like this:
+
+```{r, echo=TRUE}
+library(readr)
+library(zoo)
+library(RCurl)
+x <- getURL("https://raw.githubusercontent.com/andreneveu/data/master/OPHNFB.csv")
+prod <- read.csv(text = x)
+names(prod) <- c("Date", "OPHNFB")
+prod_t = ts(prod$OPHNFB,start=c(1947,1),end=c(2019,2),frequency=4)
+plot(prod_t, main="Nonfarm Business Sector: \n Real Output Per Hour of All Persons", ylab = "Index 2012 = 100", xlab = "Year", lty="solid", col="black")
+prod_t_l = log(prod_t)
+prod_g = diff(prod_t_l, differences = 1)
+plot(prod_g, main="Growth of Nonfarm Business Sector: \n Real Output Per Hour of All Persons", ylab = "Log Difference", xlab = "Year", lty="solid", col="black")
+
+```
+
+So, above I wanted to show you a couple of things. First, is the level of the nonfarm business sector productivity. The second plot shows you the log difference, or rate of change in the level of productivity. What I want to draw your attention to is the change in the long-run average of productivity. To do this, I want to create a moving average of the last 10 years. This would be 40 quarters. I then create a plot that shows this moving average. In order to make a moving average here, I used a function called "rollmeanr" on a transformed version of the prod_g object created above. This is called a "zoo" object, which is a special type of time-series object. 
+
+
+```{r, include=TRUE, echo=TRUE}
+prod_g_zoo = as.zoo(prod_g)
+prod_g_zoo_ma = rollmeanr(prod_g_zoo,k=40,fill=NA)
+plot(prod_g_zoo, main = "Growth Rate of Nonfarm Business Sector: \n Real Output Per Hour of All Persons", xlab = "Year", ylab = "Log Difference by Qtr")
+lines(prod_g_zoo_ma, col = "blue", lwd=2.5)
+legend(x="topright", legend=c("Growth Rate", "40 qtr MA"),col=c("black", "blue"), lty=c(1,1), lwd=c(1,2.5), cex=0.8)
+```
+
+The plot above shows that there is some long-run increase in productivity, but also some recent declines. It might be more instructive to look at some longer-term averages to give us a little more insight. First, we cut the data up into "slices" to view windows. To make this happen, I used the "window" function.
+
+```{r, echo=TRUE}
+prod_g_1 = window(prod_g,start=c(1947,2),end=c(1973,1),frequency=4)
+prod_g_2 = window(prod_g,start=c(1973,2),end=c(2019,2),freq=4)
+prod_g_2a = window(prod_g,start=c(1973,2),end=c(2000,1),freq=4)
+prod_g_3 = window(prod_g,start=c(2000,1),end=c(2009,4),freq=4)
+prod_g_4 = window(prod_g,start=c(2010,1),end=c(2019,2),freq=4)
+```
+
+Finally, I calculate the average growth rates which are log-differenced quarterly data. To make this more relatable to annual measure, I multiply each of these averages by four. 
+
+```{r, echo=TRUE}
+mean(prod_g_1)*4
+mean(prod_g_2)*4
+mean(prod_g_2a)*4
+mean(prod_g_3)*4
+mean(prod_g_4)*4
+```
+
