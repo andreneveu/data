@@ -1,0 +1,266 @@
+---
+title: "Assignment 1"
+author: "Andre Neveu"
+date: "9/7/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+## First specify the packages of interest
+packages = c("tidyverse", "ggplot2","pwt9","tidyquant","lubridate")
+
+## Now load or install&load all
+package.check <- lapply(packages, FUN = function(x) {
+    if (!require(x, character.only = TRUE)) {
+      install.packages(x, dependencies = TRUE)
+      library(x, character.only = TRUE)
+    }
+  }
+)
+```
+
+## Question 1
+
+Ch 1, #4) Use links from the snapshots.pdf file (or some other Penn World Table resource like https://fred.stlouisfed.org/categories/33402 (Links to an external site.)) to complete the following. Use a spreadsheet program or software of your choice. Note, if you are comfortable with it, R and Python have tools to directly import this type of data. 
+
+a.) Make a plot of per capita GDP (in dollars) for the years 1950 to most recent year for a country that starts with the same letter as the first letter of your your first name. Label the x-axis “year” and the y-axis “per capita GDP.” If the data does not start until a later year, please just plot what you have.
+
+b.) Make a plot of per capita GDP relative to the United States (U.S. = 100) for the years 1950 to most recent year that includes the United States and three other countries (using the first three letters of your last name). Put all of the plots on the same graph. Be sure to label the lines on the graph in some informative way so that each line can be associated with its country. (Note: if you run out of letter-country pairs in your name, just go to the next letter)
+
+```{r pwtload}
+data("pwt9.1")
+
+df <- pwt9.1 %>% 
+  select(rgdpe,pop,isocode,country,year) 
+
+usa <- df %>% 
+  filter(isocode == "USA") %>% 
+  mutate(usgdppc = rgdpe/pop) 
+
+dfshort <- df %>%
+  mutate(gdppc = rgdpe/pop) %>% 
+  filter(isocode == "USA") %>% 
+  left_join(df,., by = "year") %>% 
+  mutate(
+    gdppc.x = rgdpe.x/pop.x,
+    gdpindex = 100*gdppc.x/gdppc)
+
+```
+
+
+Plots of per capita GDP
+
+```{r percapita, echo=TRUE}
+
+ggplot(subset(dfshort, isocode.x %in% c("AUS", "NOR", "ECU", "VEN")), 
+       aes(x = year, y = gdppc.x, color = isocode.x)) + 
+  geom_line(size = 1.05) +
+  theme_light() +
+      theme(legend.position="right",
+        plot.caption=element_text(hjust=0),
+        plot.title=element_text(size=16,color="black"))+
+  labs(x = "", y = "", color = "Country", 
+       title="GDP Per Capita for Australia, Norway, Ecuador and Venezuela",
+       subtitle="Expenditure-side real GDP at chained PPPs (in 2011US$/person) for 1950-2017",
+       caption="Source: Penn World Tables 9.1")
+
+ggplot(subset(dfshort, isocode.x %in% c("AUS", "NOR", "ECU", "VEN")), 
+       aes(x = year, y = gdppc.x, color = isocode.x)) + 
+  geom_line(size = 1.05) +
+  theme_light() +
+      theme(legend.position="right",
+        plot.caption=element_text(hjust=0),
+        plot.title=element_text(size=16,color="black"))+
+  labs(x = "", y = "", color = "Country", 
+       title="GDP Per Capita for Australia, Norway, Ecuador and Venezuela",
+       subtitle="Expenditure-side real GDP at chained PPPs (in 2011US$/person) for 1950-2017",
+       caption="Source: Penn World Tables 9.1") + 
+  scale_y_log10()
+
+
+```
+When comparing per capita GDP to the U.S.:
+
+```{r , echo=FALSE}
+ggplot(subset(dfshort, isocode.x %in% c("AUS", "NOR", "ECU", "VEN")), 
+       aes(x = year, y = gdpindex, color = isocode.x)) + 
+  geom_line(size = 1.05) +
+  theme_light() +
+      theme(legend.position="right",
+        plot.caption=element_text(hjust=0),
+        plot.title=element_text(size=16,color="black"))+
+  labs(x = "", y = "", color = "Country", 
+       title="GDP Per Capita Relative to U.S. (U.S. = 100)",
+       subtitle = "Australia, Norway, Ecuador and Venezuela for 1950-2017",
+       caption="Source: Penn World Tables 9.1, Expenditure-side real GDP at chained PPPs (in mil. 2011US$) for 1950-2017")
+
+
+```
+
+## Question 2
+
+Ch 2, #5) National accounting over time (II): Consider an economy that produces oranges and boomerangs. The prices and quantities of these goods in two different years are reported in the table below. Fill in the missing entries. If you use a spreadsheet, write out the equations showing how you got your answers. Use the years given below.
+
+For example, for the first answer you would write:
+
+$$\frac{\left(105-100\right)}{100}\times 100 = 5\% $$
+
+|                                                | 2020   | 2021   | Percentage Change 2020-2021 |
+|------------------------------------------------|--------|--------|-----------------------------|
+| Quantity of oranges                            | 100    | 105    | 5%                          |
+| Quantity of boomerangs                         | 20     | 22     | 10%                         |
+| Price of oranges                               | 1      | 1.10   | 10%                         |
+| Price of boomerangs                            | 3      | 3.10   | 3.3%                        |
+| Nominal GDP                                    | 160    | 183.7  | 14.81%                      |
+| Real GDP 2020 Prices                           | 160    | 171    | 6.875%                      |
+| Real GDP 2021 Prices                           | 172    | 183.7  | 6.80%                       |
+| Real GDP in chained prices benchmarked to 2021 | 171.94 | 183.7  | 6.8375%                     |
+| Deflator 2020 Base                             | 100    | 107.43 | 7.43%                       |
+| Deflator 2021 Base                             | 93.02  | 100    | 7.503%                      |
+| Deflator Chain Base                            | 93.06  | 100    | 7.46%                       |
+ 
+## Question 3 
+
+Using the following link and FRED resources, answer the following questions. https://research.stlouisfed.org/pageone-economics/uploads/Lessons/DataPracticeFRED_Debt_deficit.pdf (Links to an external site.) (Links to an external site.)
+
+1. In what year did the United States last experience a federal budget surplus, and how much was it?
+2. Plot debt and the debt-to-GDP ratio for the US using the directions in the link above. Include both plots.
+3. What was the most recent debt, deficit, and debt-to-GDP ratio?
+4. In 2019, what happened to the deficit and debt and why? Read this article to give a brief explanation as to why you believe the deficit and debt changed in 2019 (here - https://research.stlouisfed.org/publications/page1-econ/2019/11/01/making-sense-of-the-national-debt (Links to an external site.), and here - https://datalab.usaspending.gov/americas-finance-guide/ (Links to an external site.))
+
+```{r}
+recessions.df = read.table(textConnection(
+  "Peak, Trough
+  1948-11-01, 1949-10-01
+  1953-07-01, 1954-05-01
+  1957-08-01, 1958-04-01
+  1960-04-01, 1961-02-01
+  1969-12-01, 1970-11-01
+  1973-11-01, 1975-03-01
+  1980-01-01, 1980-07-01
+  1981-07-01, 1982-11-01
+  1990-07-01, 1991-03-01
+  2001-03-01, 2001-11-01
+  2007-12-01, 2009-06-01
+  2020-02-01, 2020-06-01"), sep=',',
+  colClasses=c('Date', 'Date'), header=TRUE)
+
+startdate <- round_date(Sys.Date() - lubridate::years(80),"month")
+enddate <- round_date(Sys.Date())
+df <- tq_get("FYFSD", 
+                 get = "economic.data",
+                 from = startdate)
+
+df %>% 
+  spread(symbol,price) %>%
+  mutate(deficit = FYFSD) %>%
+  mutate(date = date + months(3)) -> df
+
+df %>% ggplot(aes(x=date,y=deficit,label=deficit)) + 
+  geom_rect(data=recessions.df, inherit.aes=F, aes(xmin=Peak,
+    xmax=Trough, ymin=-Inf, ymax=+Inf), fill='darkgray', alpha=0.5) +
+  geom_line(size=1.05) +
+    theme_light() +
+    theme(legend.position="none",
+        plot.caption=element_text(hjust=0),
+        plot.title=element_text(size=16,color="black"))+
+  labs(x = "", y = "", color = "Series", 
+       title="Federal Surplus or Deficit",
+       subtitle="Millions of Dollars",
+       caption="Source: The White House Office of Management and Budget [FRED code: FYFSD]"
+) + 
+    scale_y_continuous(labels=scales::comma,sec.axis=dup_axis())+
+    coord_cartesian(xlim=c(startdate,enddate),ylim=c(floor(min(df$deficit)),ceiling(max(df$deficit))))
+
+```
+```{r}
+df <- tq_get("FYGFDPUB", 
+                 get = "economic.data",
+                 from = startdate)
+
+df %>% 
+  spread(symbol,price) %>%
+  mutate(debt = FYGFDPUB) %>%
+  mutate(date = date + months(3)) -> df
+
+df %>% ggplot(aes(x=date,y=debt,label=debt)) + 
+  geom_rect(data=recessions.df, inherit.aes=F, aes(xmin=Peak,
+    xmax=Trough, ymin=-Inf, ymax=+Inf), fill='darkgray', alpha=0.5) +
+  geom_line(size=1.05) +
+    theme_light() +
+    theme(legend.position="none",
+        plot.caption=element_text(hjust=0),
+        plot.title=element_text(size=16,color="black"))+
+  labs(x = "", y = "", color = "Series", 
+       title="Gross Federal Debt Held by the Public",
+       subtitle="Billion of Dollars",
+       caption="Source: The White House Council of Economic Advisors [FRED code: FYGFDPUB]"
+) + 
+    scale_y_continuous(labels=scales::comma,sec.axis=dup_axis())+
+    coord_cartesian(xlim=c(startdate,enddate),ylim=c(floor(min(df$debt)),ceiling(max(df$debt))))
+
+
+```
+
+```{r}
+
+df <- tq_get(c("FYGFDPUB", "GDPA"),
+                 get = "economic.data",
+                 from = startdate)
+
+df <- df %>% 
+  mutate(year = format(date, "%Y")) %>%
+  spread(symbol,price) %>%
+  group_by(year=floor_date(date, "year")) %>%
+
+  summarize(debt=max(FYGFDPUB, na.rm=TRUE),gdp=max(GDPA, na.rm=TRUE)) %>% 
+  mutate(dgdp = 100*debt/gdp)
+
+df %>% ggplot(aes(x=year,y=dgdp,label=dgdp)) + 
+  geom_rect(data=recessions.df, inherit.aes=F, aes(xmin=Peak,
+    xmax=Trough, ymin=-Inf, ymax=+Inf), fill='darkgray', alpha=0.5) +
+  geom_line(size=1.05) +
+    theme_light() +
+    theme(legend.position="none",
+        plot.caption=element_text(hjust=0),
+        plot.title=element_text(size=16,color="black"))+
+  labs(x = "", y = "", color = "Series", 
+       title="Gross Federal Debt Held by the Public/GDP",
+       subtitle="Percent of GDP",
+       caption="Source: The White House Council of Economic Advisors [FRED codes: FYGFDPUB and GDPA]"
+) + 
+    scale_y_continuous(labels=scales::comma,sec.axis=dup_axis())+
+    coord_cartesian(xlim=c(startdate,enddate),ylim=c(floor(min(df$dgdp)),ceiling(max(df$dgdp))))
+
+```
+
+## Question 4
+
+Ch 2, #8) Swedish GDP in 2017 was 440 billion kroner, with U.S. GDP of $17.7 trillion. The exchange rate at the time was 8.5 kroner per dollar. Contrary to China and India however, Sweden had higher prices than the United States: the price level in Sweden (converted to dollars) divided by the price level in the United States was 1.11 in 2017. 
+
+1. What is the ratio of Swedish GDP to U.S. GDP if we don't take into account the differences in relative prices and simply use the exchange rate to make the conversion?
+  
+  $$ 440/8.5 = 51.76  \text{ billion} $$
+
+  The ratio here would be 17,700 billion to 51.76 billion, or $$ 17,700/51.76 = 341.96 $$, if we flip that over though, we would get $$ 51.76/17,700 = 0.003 $$ or about 0.3%
+  
+2. What is the ratio of GDP in Sweden to real GDP in the United States in common prices?
+
+
+  If we correct for price differences using these numbers, we would find that 341.96 is too high, since prices are higher in Sweden. Thus, the purchasing power parity correction would give us
+  
+  $$ 51.76/1.11 = 46.63 $$
+    The ratio here would be 17,700 billion to 51.76 billion, or $$ 17,700/46.63 = 379.58 $$, if we flip that over though, we would get $$ 46.63/17,700 = 0.0026 $$ or about 0.26%
+
+3. Why are these two numbers different?
+
+GDP is different here because of price differences and exchange rate differences. 
+
+## Question 4 Correction
+
+Something really struck me while writing up the answer here. The question is wrong! Swedish GDP is probably closer to 440 billion USD, and thus converted to kroner at 8.5 kroner per dollar, would mean a Swedish GDP in kroner of about \$3,740 billion or \$3.7 trillion
+
+Thus, the ratio of GDP in dollars, is more like $$ 17,700/440 = 40.2 $$, inverse of that being $$ 440/17,700 = 0.248$$ or 2.5%
+
+Now, this does not correct for price differences, so we can still make that correction here. Thus $$ 440/1.11 = 396.4$$, giving us a ratio more like or $$ 17,700/396.4 = 44.65 $$, if we flip that over though, we would get $$ 396.4/17,700 = 0.022 $$ or about 2.2%
